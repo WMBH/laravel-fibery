@@ -6,6 +6,7 @@ use WMBH\Fibery\Api\FieldManager;
 use WMBH\Fibery\Api\FileManager;
 use WMBH\Fibery\Api\SchemaManager;
 use WMBH\Fibery\Api\TypeManager;
+use WMBH\Fibery\Api\WebhookManager;
 use WMBH\Fibery\Fibery;
 use WMBH\Fibery\Query\QueryBuilder;
 
@@ -80,6 +81,13 @@ it('returns document manager', function () {
     $manager = $fibery->documents();
 
     expect($manager)->toBeInstanceOf(DocumentManager::class);
+});
+
+it('returns webhook manager', function () {
+    $fibery = new Fibery('test-workspace', 'test-token');
+    $manager = $fibery->webhooks();
+
+    expect($manager)->toBeInstanceOf(WebhookManager::class);
 });
 
 it('reuses manager instances', function () {

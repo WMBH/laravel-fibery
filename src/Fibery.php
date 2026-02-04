@@ -8,6 +8,7 @@ use WMBH\Fibery\Api\FieldManager;
 use WMBH\Fibery\Api\FileManager;
 use WMBH\Fibery\Api\SchemaManager;
 use WMBH\Fibery\Api\TypeManager;
+use WMBH\Fibery\Api\WebhookManager;
 use WMBH\Fibery\Exceptions\FiberyException;
 use WMBH\Fibery\Query\QueryBuilder;
 
@@ -26,6 +27,8 @@ class Fibery
     protected ?FileManager $fileManager = null;
 
     protected ?DocumentManager $documentManager = null;
+
+    protected ?WebhookManager $webhookManager = null;
 
     public function __construct(string $workspace, string $token, array $options = [])
     {
@@ -287,6 +290,18 @@ class Fibery
         }
 
         return $this->documentManager;
+    }
+
+    /**
+     * Get the webhook manager for webhook operations.
+     */
+    public function webhooks(): WebhookManager
+    {
+        if ($this->webhookManager === null) {
+            $this->webhookManager = new WebhookManager($this->client);
+        }
+
+        return $this->webhookManager;
     }
 
     /**

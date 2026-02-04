@@ -4,6 +4,18 @@ All notable changes to `laravel-fibery` will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-02-04
+
+### Added
+- Webhook API support via `WebhookManager` for receiving notifications when entities change
+  - `create(string $url, string $type)` - Create a webhook for a type
+  - `all()` - List all webhooks with their last 50 runs
+  - `get(int $id)` - Get a webhook by ID
+  - `delete(int $id)` - Delete a webhook
+  - `getByType(string $type)` - Get webhooks filtered by type
+  - `exists(int $id)` - Check if a webhook exists
+- New `Fibery::webhooks()` accessor method for webhook operations
+
 ## [1.0.0] - 2024-XX-XX
 
 ### Added

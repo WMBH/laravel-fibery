@@ -370,6 +370,35 @@ Fibery::documents()->updateContent('document-secret', [
 Fibery::documents()->setMarkdown('document-secret', '# Hello World');
 ```
 
+### Webhooks
+
+Use webhooks to receive notifications when entities change in Fibery.
+
+```php
+// Create a webhook for a type
+$webhook = Fibery::webhooks()->create('https://your-endpoint.com/webhook', 'Space/Task');
+// Returns: ['id' => 5, 'url' => '...', 'type' => 'Space/Task', 'state' => 'active', ...]
+
+// List all webhooks
+$webhooks = Fibery::webhooks()->all();
+
+// Get a webhook by ID
+$webhook = Fibery::webhooks()->get(5);
+
+// Delete a webhook
+Fibery::webhooks()->delete(5);
+
+// Get webhooks filtered by type
+$webhooks = Fibery::webhooks()->getByType('Space/Task');
+
+// Check if a webhook exists
+if (Fibery::webhooks()->exists(5)) {
+    // ...
+}
+```
+
+> **Note:** Only Fibery Admins can configure webhooks. Rich text field changes are not supported.
+
 ### Raw Commands
 
 ```php
