@@ -70,7 +70,7 @@ class FiberyClient
         $payload = [
             [
                 'command' => $command,
-                'args' => $args,
+                'args' => $args === [] ? new \stdClass : $args,
             ],
         ];
 

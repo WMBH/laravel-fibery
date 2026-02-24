@@ -4,6 +4,11 @@ All notable changes to `laravel-fibery` will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-02-24
+
+### Fixed
+- Fixed empty `args` being serialized as JSON array `[]` instead of JSON object `{}` in API commands, which caused errors on commands with no arguments (e.g. `fibery.schema/query`)
+
 ## [1.1.0] - 2025-02-04
 
 ### Added
