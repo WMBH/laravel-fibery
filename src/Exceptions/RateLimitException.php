@@ -6,9 +6,9 @@ class RateLimitException extends FiberyException
 {
     protected int $retryAfter;
 
-    public function __construct(string $message = 'Rate limit exceeded', int $retryAfter = 1)
+    public function __construct(string $message = 'Rate limit exceeded', int $retryAfter = 1, array $response = [])
     {
-        parent::__construct($message, 429);
+        parent::__construct($message, 429, null, $response);
         $this->retryAfter = $retryAfter;
     }
 
