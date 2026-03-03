@@ -2,8 +2,6 @@
 
 namespace WMBH\Fibery\Api;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 use WMBH\Fibery\Exceptions\FiberyException;
 use WMBH\Fibery\FiberyClient;
 
@@ -11,15 +9,9 @@ class FileManager
 {
     protected FiberyClient $client;
 
-    protected Client $http;
-
     public function __construct(FiberyClient $client)
     {
         $this->client = $client;
-        $this->http = new Client([
-            'base_uri' => $client->getBaseUri(),
-            'timeout' => 60, // Files may take longer
-        ]);
     }
 
     /**
@@ -37,31 +29,15 @@ class FileManager
 
         $fileName = $fileName ?? basename($filePath);
 
-        try {
-            $response = $this->http->post('api/files', [
-                'headers' => [
-                    'Authorization' => 'Token '.$this->getToken(),
+        return $this->client->rawRequest('POST', 'api/files', [
+            'multipart' => [
+                [
+                    'name' => 'file',
+                    'contents' => fopen($filePath, 'r'),
+                    'filename' => $fileName,
                 ],
-                'multipart' => [
-                    [
-                        'name' => 'file',
-                        'contents' => fopen($filePath, 'r'),
-                        'filename' => $fileName,
-                    ],
-                ],
-            ]);
-
-            $body = $response->getBody()->getContents();
-            $data = json_decode($body, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new FiberyException('Invalid JSON response from file upload');
-            }
-
-            return $data;
-        } catch (GuzzleException $e) {
-            throw new FiberyException('File upload failed: '.$e->getMessage(), 0, $e);
-        }
+            ],
+        ]);
     }
 
     /**
@@ -73,31 +49,15 @@ class FileManager
      */
     public function uploadContent(string $content, string $fileName): array
     {
-        try {
-            $response = $this->http->post('api/files', [
-                'headers' => [
-                    'Authorization' => 'Token '.$this->getToken(),
+        return $this->client->rawRequest('POST', 'api/files', [
+            'multipart' => [
+                [
+                    'name' => 'file',
+                    'contents' => $content,
+                    'filename' => $fileName,
                 ],
-                'multipart' => [
-                    [
-                        'name' => 'file',
-                        'contents' => $content,
-                        'filename' => $fileName,
-                    ],
-                ],
-            ]);
-
-            $body = $response->getBody()->getContents();
-            $data = json_decode($body, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new FiberyException('Invalid JSON response from file upload');
-            }
-
-            return $data;
-        } catch (GuzzleException $e) {
-            throw new FiberyException('File upload failed: '.$e->getMessage(), 0, $e);
-        }
+            ],
+        ]);
     }
 
     /**
@@ -107,17 +67,7 @@ class FileManager
      */
     public function download(string $fileSecret): string
     {
-        try {
-            $response = $this->http->get("api/files/{$fileSecret}", [
-                'headers' => [
-                    'Authorization' => 'Token '.$this->getToken(),
-                ],
-            ]);
-
-            return $response->getBody()->getContents();
-        } catch (GuzzleException $e) {
-            throw new FiberyException('File download failed: '.$e->getMessage(), 0, $e);
-        }
+        return $this->client->rawDownload('GET', "api/files/{$fileSecret}");
     }
 
     /**
@@ -125,11 +75,13 @@ class FileManager
      *
      * @throws FiberyException
      */
-    public function downloadTo(string $fileSecret, string $destinationPath): bool
+    public function downloadTo(string $fileSecret, string $destinationPath): void
     {
         $content = $this->download($fileSecret);
 
-        return file_put_contents($destinationPath, $content) !== false;
+        if (@file_put_contents($destinationPath, $content) === false) {
+            throw new FiberyException("Failed to write file to: {$destinationPath}");
+        }
     }
 
     /**
@@ -170,18 +122,5 @@ class FileManager
         ]);
 
         return $response['result'] ?? [];
-    }
-
-    /**
-     * Get the API token from the client (via reflection or stored reference).
-     */
-    protected function getToken(): string
-    {
-        // Access protected property via closure binding
-        $getToken = \Closure::bind(function () {
-            return $this->token;
-        }, $this->client, FiberyClient::class);
-
-        return $getToken();
     }
 }
