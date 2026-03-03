@@ -265,7 +265,7 @@ class QueryBuilder
     {
         $response = $this->client->command('fibery.entity/query', [
             'query' => $this->buildQuery(),
-            'params' => $this->params,
+            'params' => $this->params ?: new \stdClass,
         ]);
 
         return $response['result'] ?? [];
@@ -333,7 +333,7 @@ class QueryBuilder
     {
         return [
             'query' => $this->buildQuery(),
-            'params' => $this->params,
+            'params' => $this->params ?: new \stdClass,
         ];
     }
 

@@ -252,3 +252,24 @@ it('uses default select when none specified', function () {
 
     expect($query['query']['q/select'])->toBe(['fibery/id']);
 });
+
+it('serializes empty params as object not array', function () {
+    $builder = new QueryBuilder($this->client, 'Space/Task');
+    $query = $builder->select(['fibery/id'])->toArray();
+
+    // params must be stdClass (serializes to {} in JSON), not [] (serializes to JSON [])
+    expect($query['params'])->toBeInstanceOf(\stdClass::class);
+    expect(json_encode($query['params']))->toBe('{}');
+});
+
+it('serializes populated params as associative array', function () {
+    $builder = new QueryBuilder($this->client, 'Space/Task');
+    $query = $builder
+        ->select(['fibery/id'])
+        ->where('Space/Status', 'Active')
+        ->toArray();
+
+    // When params exist, they should remain an associative array
+    expect($query['params'])->toBeArray();
+    expect($query['params'])->toHaveKey('$p0');
+});
