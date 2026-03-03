@@ -4,10 +4,13 @@ namespace WMBH\Fibery;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use WMBH\Fibery\Exceptions\AuthenticationException;
+use WMBH\Fibery\Exceptions\ConnectionException;
 use WMBH\Fibery\Exceptions\FiberyException;
 use WMBH\Fibery\Exceptions\RateLimitException;
+use WMBH\Fibery\Exceptions\TimeoutException;
 
 class FiberyClient
 {
@@ -55,6 +58,11 @@ class FiberyClient
     public function getWorkspace(): string
     {
         return $this->workspace;
+    }
+
+    public function getToken(): string
+    {
+        return $this->token;
     }
 
     /**
@@ -108,6 +116,99 @@ class FiberyClient
     }
 
     /**
+     * Execute a raw HTTP request against the Fibery API.
+     *
+     * @param  array<string, mixed>  $options  Guzzle request options
+     * @return array<mixed>
+     *
+     * @throws FiberyException
+     */
+    public function rawRequest(string $method, string $uri, array $options = []): array
+    {
+        $body = $this->executeRawRequest($method, $uri, $options);
+
+        /** @var array<mixed> $data */
+        $data = json_decode($body, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new FiberyException('Invalid JSON response from Fibery API: '.json_last_error_msg());
+        }
+
+        return $data;
+    }
+
+    /**
+     * Execute a raw HTTP request and return the response body as a string.
+     *
+     * @param  array<string, mixed>  $options  Guzzle request options
+     *
+     * @throws FiberyException
+     */
+    public function rawDownload(string $method, string $uri, array $options = []): string
+    {
+        return $this->executeRawRequest($method, $uri, $options);
+    }
+
+    /**
+     * Execute a raw HTTP request with retry logic.
+     *
+     * @param  array<string, mixed>  $options
+     *
+     * @throws FiberyException
+     */
+    protected function executeRawRequest(string $method, string $uri, array $options = []): string
+    {
+        // Ensure auth header is included
+        $options['headers'] = array_merge([
+            'Authorization' => 'Token '.$this->token,
+            'Accept' => 'application/json',
+        ], $options['headers'] ?? []);
+
+        $attempts = 0;
+        $lastException = null;
+
+        while ($attempts < $this->retryTimes) {
+            try {
+                $response = $this->http->request($method, $uri, $options);
+
+                return $response->getBody()->getContents();
+            } catch (ConnectException $e) {
+                throw $this->classifyConnectException($e);
+            } catch (ClientException $e) {
+                $statusCode = $e->getResponse()->getStatusCode();
+
+                if ($statusCode === 429) {
+                    $attempts++;
+                    $retryAfter = (int) ($e->getResponse()->getHeaderLine('Retry-After') ?: 1);
+                    $lastException = new RateLimitException('Rate limit exceeded', $retryAfter);
+
+                    if ($attempts < $this->retryTimes) {
+                        usleep($this->retrySleep * 1000);
+
+                        continue;
+                    }
+
+                    throw $lastException;
+                }
+
+                if ($statusCode === 401) {
+                    throw new AuthenticationException('Invalid or missing API token');
+                }
+
+                $responseBody = $e->getResponse()->getBody()->getContents();
+                /** @var array<mixed> $errorData */
+                $errorData = json_decode($responseBody, true) ?? [];
+
+                throw FiberyException::fromResponse($errorData, $statusCode);
+            } catch (GuzzleException $e) {
+                throw new FiberyException('HTTP request failed: '.$e->getMessage(), 0, $e);
+            }
+        }
+
+        throw $lastException ?? new FiberyException('Max retry attempts exceeded');
+    }
+
+    /**
      * Send a request to the Fibery API with retry logic for rate limits.
      *
      * @param  array<mixed>  $payload
@@ -132,13 +233,15 @@ class FiberyClient
                 $data = json_decode($body, true);
 
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    throw new FiberyException('Invalid JSON response from Fibery API');
+                    throw new FiberyException('Invalid JSON response from Fibery API: '.json_last_error_msg());
                 }
 
                 // Check for errors in the response
                 $this->checkResponseForErrors($data);
 
                 return $data;
+            } catch (ConnectException $e) {
+                throw $this->classifyConnectException($e);
             } catch (ClientException $e) {
                 $statusCode = $e->getResponse()->getStatusCode();
                 $responseBody = $e->getResponse()->getBody()->getContents();
@@ -148,7 +251,8 @@ class FiberyClient
 
                 if ($statusCode === 429) {
                     $attempts++;
-                    $lastException = new RateLimitException('Rate limit exceeded', 1);
+                    $retryAfter = (int) ($e->getResponse()->getHeaderLine('Retry-After') ?: 1);
+                    $lastException = new RateLimitException('Rate limit exceeded', $retryAfter);
 
                     if ($attempts < $this->retryTimes) {
                         usleep($this->retrySleep * 1000);
@@ -189,6 +293,20 @@ class FiberyClient
                 }
             }
         }
+    }
+
+    /**
+     * Classify a ConnectException as either TimeoutException or ConnectionException.
+     */
+    protected function classifyConnectException(ConnectException $e): ConnectionException
+    {
+        $message = $e->getMessage();
+
+        if (str_contains($message, 'timed out') || str_contains($message, 'timeout')) {
+            return new TimeoutException('Request to Fibery timed out: '.$message, 0, $e);
+        }
+
+        return new ConnectionException('Connection to Fibery failed: '.$message, 0, $e);
     }
 
     /**
