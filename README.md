@@ -343,7 +343,7 @@ $file = Fibery::files()->uploadContent($content, 'document.pdf');
 // Download a file
 $content = Fibery::files()->download('file-secret');
 
-// Download to path
+// Download to path (throws FiberyException on write failure)
 Fibery::files()->downloadTo('file-secret', '/path/to/save.pdf');
 
 // Attach file to entity
@@ -420,23 +420,45 @@ $results = Fibery::batch([
 
 ## Error Handling
 
+The package provides a hierarchy of exceptions for granular error handling:
+
 ```php
 use WMBH\Fibery\Exceptions\FiberyException;
 use WMBH\Fibery\Exceptions\AuthenticationException;
 use WMBH\Fibery\Exceptions\RateLimitException;
+use WMBH\Fibery\Exceptions\ConnectionException;
+use WMBH\Fibery\Exceptions\TimeoutException;
 
 try {
     $tasks = Fibery::query('Project/Task')->get();
 } catch (AuthenticationException $e) {
-    // Invalid or missing token
+    // Invalid or missing token (HTTP 401)
 } catch (RateLimitException $e) {
-    // Rate limit exceeded (after retries)
-    $retryAfter = $e->getRetryAfter();
+    // Rate limit exceeded after all retries (HTTP 429)
+    $retryAfter = $e->getRetryAfter(); // seconds from Retry-After header
+} catch (TimeoutException $e) {
+    // Request timed out (extends ConnectionException)
+} catch (ConnectionException $e) {
+    // Network error: DNS failure, connection refused, etc.
 } catch (FiberyException $e) {
     // General API error
-    $response = $e->getResponse();
+    $response = $e->getResponse(); // full API response data
+    $statusCode = $e->getCode();   // HTTP status code
 }
 ```
+
+**Exception hierarchy:**
+
+```
+FiberyException (base)
+├── AuthenticationException (401)
+├── RateLimitException (429)
+├── ValidationException (422)
+├── ConnectionException (network errors)
+│   └── TimeoutException (request timeouts)
+```
+
+All exceptions extend `FiberyException`, so catching `FiberyException` catches everything. Use specific exception types for targeted error handling.
 
 ## Rate Limits
 
@@ -444,7 +466,7 @@ Fibery enforces rate limits:
 - 3 requests per second per token
 - 7 requests per second per workspace
 
-The package automatically retries on 429 responses (configurable via `retry.times` and `retry.sleep`).
+The package automatically retries on 429 responses (configurable via `retry.times` and `retry.sleep`). When retries are exhausted, a `RateLimitException` is thrown with the `Retry-After` value from the API response.
 
 ## Testing
 
