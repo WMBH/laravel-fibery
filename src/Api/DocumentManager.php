@@ -2,8 +2,6 @@
 
 namespace WMBH\Fibery\Api;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 use WMBH\Fibery\Exceptions\FiberyException;
 use WMBH\Fibery\FiberyClient;
 
@@ -11,15 +9,9 @@ class DocumentManager
 {
     protected FiberyClient $client;
 
-    protected Client $http;
-
     public function __construct(FiberyClient $client)
     {
         $this->client = $client;
-        $this->http = new Client([
-            'base_uri' => $client->getBaseUri(),
-            'timeout' => 30,
-        ]);
     }
 
     /**
@@ -31,25 +23,7 @@ class DocumentManager
      */
     public function getContent(string $documentSecret): array
     {
-        try {
-            $response = $this->http->get("api/documents/{$documentSecret}", [
-                'headers' => [
-                    'Authorization' => 'Token '.$this->getToken(),
-                    'Accept' => 'application/json',
-                ],
-            ]);
-
-            $body = $response->getBody()->getContents();
-            $data = json_decode($body, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new FiberyException('Invalid JSON response from document API');
-            }
-
-            return $data;
-        } catch (GuzzleException $e) {
-            throw new FiberyException('Failed to get document: '.$e->getMessage(), 0, $e);
-        }
+        return $this->client->rawRequest('GET', "api/documents/{$documentSecret}");
     }
 
     /**
@@ -62,27 +36,12 @@ class DocumentManager
      */
     public function updateContent(string $documentSecret, array $content): array
     {
-        try {
-            $response = $this->http->put("api/documents/{$documentSecret}", [
-                'headers' => [
-                    'Authorization' => 'Token '.$this->getToken(),
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json',
-                ],
-                'json' => $content,
-            ]);
-
-            $body = $response->getBody()->getContents();
-            $data = json_decode($body, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                return ['success' => true];
-            }
-
-            return $data;
-        } catch (GuzzleException $e) {
-            throw new FiberyException('Failed to update document: '.$e->getMessage(), 0, $e);
-        }
+        return $this->client->rawRequest('PUT', "api/documents/{$documentSecret}", [
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ],
+            'json' => $content,
+        ]);
     }
 
     /**
@@ -137,17 +96,5 @@ class DocumentManager
                 ],
             ],
         ]);
-    }
-
-    /**
-     * Get the API token from the client.
-     */
-    protected function getToken(): string
-    {
-        $getToken = \Closure::bind(function () {
-            return $this->token;
-        }, $this->client, FiberyClient::class);
-
-        return $getToken();
     }
 }
