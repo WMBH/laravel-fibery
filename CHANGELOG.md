@@ -2,6 +2,32 @@
 
 All notable changes to `laravel-fibery` will be documented in this file.
 
+## v1.2.0 — Error Handling Overhaul & Params Fix - 2026-03-03
+
+### What's Changed
+
+#### Bug Fixes
+
+- **Fix `params: []` serialization** — `QueryBuilder::get()` now sends `params: {}` (JSON object) instead of `params: []` (JSON array) when no where clauses are used. Fibery's API rejects empty arrays for the params field.
+
+#### New Features
+
+- **Centralized HTTP in FiberyClient** — New `rawRequest()`, `rawDownload()`, and `getToken()` methods. All managers now route through FiberyClient instead of creating their own Guzzle clients.
+- **New exception types** — `ConnectionException` (network/DNS failures) and `TimeoutException` (request timeouts) for granular error handling.
+- **`RateLimitException` improvements** — Now accepts and stores response data; parses `Retry-After` header from 429 responses.
+- **Better error messages** — Invalid JSON errors now include `json_last_error_msg()` detail.
+
+#### Breaking Changes
+
+- `FileManager::downloadTo()` return type changed from `bool` to `void` — now throws `FiberyException` on write failure instead of returning `false`.
+- `DocumentManager::updateContent()` now throws `FiberyException` on invalid JSON response instead of silently returning `['success' => true]`.
+
+#### Internal
+
+- WebhookManager, DocumentManager, FileManager refactored to use FiberyClient for all HTTP — removes duplicate Guzzle clients and `Closure::bind` token access hacks.
+- Consistent retry logic and error classification across all API endpoints.
+- 90 tests (128 assertions), PHPStan level 5, Laravel Pint formatted.
+
 ## 1.1.1 - 2026-02-25
 
 Fix empty args serialized as JSON array instead of object
@@ -24,6 +50,7 @@ to ensure correct `{}` serialization.
 ### Added
 
 - Webhook API support via `WebhookManager` for receiving notifications when entities change
+  
   - `create(string $url, string $type)` - Create a webhook for a type
   - `all()` - List all webhooks with their last 50 runs
   - `get(int $id)` - Get a webhook by ID
@@ -32,6 +59,7 @@ to ensure correct `{}` serialization.
   - `exists(int $id)` - Check if a webhook exists
   
 - New `Fibery::webhooks()` accessor method for webhook operations
+  
 
 ## [1.0.0] - 2024-XX-XX
 
