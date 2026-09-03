@@ -258,7 +258,7 @@ it('serializes empty params as object not array', function () {
     $query = $builder->select(['fibery/id'])->toArray();
 
     // params must be stdClass (serializes to {} in JSON), not [] (serializes to JSON [])
-    expect($query['params'])->toBeInstanceOf(\stdClass::class);
+    expect($query['params'])->toBeInstanceOf(stdClass::class);
     expect(json_encode($query['params']))->toBe('{}');
 });
 

@@ -2,6 +2,17 @@
 
 All notable changes to `laravel-fibery` will be documented in this file.
 
+## [1.2.1] - 2026-09-03
+
+### Added
+
+- Laravel 13 support (`illuminate/contracts ^13.0`), CI matrix job for L13 / Testbench 11
+
+### Changed
+
+- Dev dependencies bumped: Testbench `^11.0`, Pint `^1.30`, Larastan `^3.11`, Collision `^8.9`, Ray `^1.43`
+- `spatie/laravel-package-tools` floor raised to `^1.93` (first release allowing Laravel 13)
+
 ## [1.2.0] - 2026-03-03
 
 ### Fixed
