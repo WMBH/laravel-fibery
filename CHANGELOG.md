@@ -2,6 +2,47 @@
 
 All notable changes to `laravel-fibery` will be documented in this file.
 
+## v1.2.1 - 2026-09-03
+
+### What's Changed
+
+Compatibility release: adds **Laravel 13** support. No API changes — a drop-in patch for anyone upgrading their app to Laravel 13.
+
+#### Compatibility
+
+| | Supported |
+|---|---|
+| PHP | 8.2, 8.3, 8.4 |
+| Laravel | 10, 11, 12, **13** |
+| Testbench | 8, 9, 10, **11** |
+
+`illuminate/contracts` widened to `^10.0||^11.0||^12.0||^13.0`.
+
+#### Dependencies
+
+- `spatie/laravel-package-tools` floor raised to `^1.93` — the first release whose own `illuminate/contracts` constraint allows Laravel 13. This is the only prod-dependency floor that moved.
+- Dev dependencies brought current: Testbench `^11.0`, Pint `^1.30`, Larastan `^3.11`, Collision `^8.9`, Ray `^1.43`.
+
+#### CI
+
+- `run-tests.yml` matrix gains a `laravel: 13.*` / `testbench: 11.*` job, on PHP 8.3 + 8.4, `prefer-lowest` and `prefer-stable`, Ubuntu + Windows.
+
+#### Verification
+
+Verified locally against `laravel/framework v13.30.1` + `orchestra/testbench 11.2.0`:
+
+- 90 tests, 128 assertions — all pass
+- PHPStan (level 5) — no errors
+- Pint — clean
+
+#### Upgrading
+
+    composer require wmbh/laravel-fibery:^1.2.1
+    
+Nothing else to do. No config, signature, or behaviour changes from v1.2.0.
+
+**Full Changelog**: https://github.com/WMBH/laravel-fibery/compare/v1.2.0...v1.2.1
+
 ## [1.2.1] - 2026-09-03
 
 ### Added
@@ -62,14 +103,16 @@ to ensure correct `{}` serialization.
 ### Added
 
 - Webhook API support via `WebhookManager` for receiving notifications when entities change
+  
   - `create(string $url, string $type)` - Create a webhook for a type
   - `all()` - List all webhooks with their last 50 runs
   - `get(int $id)` - Get a webhook by ID
   - `delete(int $id)` - Delete a webhook
   - `getByType(string $type)` - Get webhooks filtered by type
   - `exists(int $id)` - Check if a webhook exists
-
+  
 - New `Fibery::webhooks()` accessor method for webhook operations
+  
 
 ## [1.0.0] - 2024-XX-XX
 
